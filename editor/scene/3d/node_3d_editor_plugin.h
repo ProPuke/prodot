@@ -787,6 +787,8 @@ private:
 	SpinBox *settings_znear = nullptr;
 	SpinBox *settings_zfar = nullptr;
 
+	void _button_2d();
+	void _button_3d();
 	void _snap_changed();
 	void _snap_update();
 	void _update_vertex_snap_tooltips();
@@ -876,6 +878,8 @@ private:
 	Ref<Shader> sun_direction_shader;
 	Ref<ShaderMaterial> sun_direction_material;
 
+	Button *view_2d_button = nullptr;
+	Button *view_3d_button = nullptr;
 	Button *environ_button = nullptr;
 	Label *environ_state = nullptr;
 	Label *environ_title = nullptr;

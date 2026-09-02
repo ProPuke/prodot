@@ -336,6 +336,9 @@ private:
 	};
 	List<PoseClipboard> pose_clipboard;
 
+	Button *view_2d_button = nullptr;
+	Button *view_3d_button = nullptr;
+
 	Button *select_button = nullptr;
 
 	Button *move_button = nullptr;
@@ -547,6 +550,8 @@ private:
 	void _update_zoom(real_t p_zoom);
 	void _shortcut_zoom_set(real_t p_zoom);
 	void _zoom_on_position(real_t p_zoom, Point2 p_position = Point2());
+	void _button_2d();
+	void _button_3d();
 	void _button_toggle_local_space(bool p_status);
 	void _button_toggle_smart_snap(bool p_status);
 	void _button_toggle_grid_snap(bool p_status);

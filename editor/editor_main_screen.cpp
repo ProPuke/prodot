@@ -43,7 +43,7 @@ void EditorMainScreen::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_READY: {
 			set_accessibility_region(true);
-			if (EDITOR_3D < buttons.size() && buttons[EDITOR_3D]->is_visible()) {
+			if (is_editor_enabled(EDITOR_3D)) {
 				// If the 3D editor is enabled, use this as the default.
 				select(EDITOR_3D);
 				return;
@@ -51,9 +51,8 @@ void EditorMainScreen::_notification(int p_what) {
 
 			// Switch to the first main screen plugin that is enabled. Usually this is
 			// 2D, but may be subsequent ones if 2D is disabled in the feature profile.
-			for (int i = 0; i < buttons.size(); i++) {
-				Button *editor_button = buttons[i];
-				if (editor_button->is_visible()) {
+			for (unsigned int i = 0; i < editors.size(); i++) {
+				if (is_editor_enabled(i)) {
 					select(i);
 					return;
 				}
@@ -62,15 +61,23 @@ void EditorMainScreen::_notification(int p_what) {
 			select(-1);
 		} break;
 		case NOTIFICATION_THEME_CHANGED: {
-			for (int i = 0; i < buttons.size(); i++) {
-				Button *tb = buttons[i];
-				EditorPlugin *p_editor = editor_table[i];
-				Ref<Texture2D> icon = p_editor->get_plugin_icon();
+			{
+				Ref<Texture2D> icon = get_theme_icon(SNAME("PackedScene"), EditorStringName(EditorIcons));
+				if (icon.is_valid()) {
+					scene_button->set_button_icon(icon);
+				}
+			}
+			for (Editor &editor : editors) {
+				if (editor.button == nullptr) {
+					continue;
+				}
+
+				Ref<Texture2D> icon = editor.plugin->get_plugin_icon();
 
 				if (icon.is_valid()) {
-					tb->set_button_icon(icon);
-				} else if (has_theme_icon(p_editor->get_plugin_name(), EditorStringName(EditorIcons))) {
-					tb->set_button_icon(get_theme_icon(p_editor->get_plugin_name(), EditorStringName(EditorIcons)));
+					editor.button->set_button_icon(icon);
+				} else if (has_theme_icon(editor.plugin->get_plugin_name(), EditorStringName(EditorIcons))) {
+					editor.button->set_button_icon(get_theme_icon(editor.plugin->get_plugin_name(), EditorStringName(EditorIcons)));
 				}
 			}
 		} break;
@@ -79,12 +86,29 @@ void EditorMainScreen::_notification(int p_what) {
 
 void EditorMainScreen::set_button_container(HBoxContainer *p_button_hb) {
 	button_hb = p_button_hb;
+
+	scene_button = memnew(Button);
+	scene_button->set_toggle_mode(true);
+	scene_button->set_theme_type_variation("MainScreenButton");
+	scene_button->set_text(TTRC("Scene"));
+	scene_button->set_shortcut(ED_SHORTCUT("editor/editor_scene", TTRC("Open Scene Workspace"), KeyModifierMask::CTRL | Key::F1, true));
+
+	Ref<Texture2D> icon = get_theme_icon(SNAME("PackedScene"), EditorStringName(EditorIcons));
+	if (icon.is_valid()) {
+		scene_button->set_button_icon(icon);
+		// Make sure the control is updated if the icon is reimported.
+		icon->connect_changed(callable_mp((Control *)scene_button, &Control::update_minimum_size));
+	}
+
+	scene_button->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select_scene_editor));
+
+	button_hb->add_child(scene_button);
 }
 
 void EditorMainScreen::save_layout_to_config(Ref<ConfigFile> p_config_file, const String &p_section) const {
 	int selected_main_editor_idx = -1;
-	for (int i = 0; i < buttons.size(); i++) {
-		if (buttons[i]->is_pressed()) {
+	for (unsigned int i = 0; i < editors.size(); i++) {
+		if (editors[i].button && editors[i].button->is_pressed()) {
 			selected_main_editor_idx = i;
 			break;
 		}
@@ -98,27 +122,33 @@ void EditorMainScreen::save_layout_to_config(Ref<ConfigFile> p_config_file, cons
 
 void EditorMainScreen::load_layout_from_config(Ref<ConfigFile> p_config_file, const String &p_section) {
 	int selected_main_editor_idx = p_config_file->get_value(p_section, "selected_main_editor_idx", -1);
-	if (selected_main_editor_idx >= 0 && selected_main_editor_idx < buttons.size()) {
+	if (selected_main_editor_idx >= 0 && selected_main_editor_idx < (int)editors.size()) {
 		callable_mp(this, &EditorMainScreen::select).call_deferred(selected_main_editor_idx);
 	}
 }
 
-void EditorMainScreen::set_button_enabled(int p_index, bool p_enabled) {
-	ERR_FAIL_INDEX(p_index, buttons.size());
-	buttons[p_index]->set_visible(p_enabled);
-	if (!p_enabled && buttons[p_index]->is_pressed()) {
-		select(EDITOR_2D);
+void EditorMainScreen::set_editor_enabled(int p_index, bool p_enabled) {
+	ERR_FAIL_INDEX(p_index, (int)editors.size());
+
+	editors[p_index].enabled = p_enabled;
+
+	if (Button *button = editors[p_index].button) {
+		button->set_visible(p_enabled);
+
+		if (!p_enabled && button->is_pressed()) {
+			select(EDITOR_2D);
+		}
 	}
 }
 
-bool EditorMainScreen::is_button_enabled(int p_index) const {
-	ERR_FAIL_INDEX_V(p_index, buttons.size(), false);
-	return buttons[p_index]->is_visible();
+bool EditorMainScreen::is_editor_enabled(int p_index) const {
+	ERR_FAIL_INDEX_V(p_index, (int)editors.size(), false);
+	return editors[p_index].enabled;
 }
 
 int EditorMainScreen::_get_current_main_editor() const {
-	for (int i = 0; i < editor_table.size(); i++) {
-		if (editor_table[i] == selected_plugin) {
+	for (unsigned int i = 0; i < editors.size(); i++) {
+		if (editors[i].plugin == selected_plugin) {
 			return i;
 		}
 	}
@@ -130,12 +160,12 @@ void EditorMainScreen::select_next() {
 	int editor = _get_current_main_editor();
 
 	do {
-		if (editor == editor_table.size() - 1) {
+		if (editor == (int)editors.size() - 1) {
 			editor = 0;
 		} else {
 			editor++;
 		}
-	} while (!buttons[editor]->is_visible());
+	} while (!is_editor_enabled(editor));
 
 	select(editor);
 }
@@ -145,11 +175,11 @@ void EditorMainScreen::select_prev() {
 
 	do {
 		if (editor == 0) {
-			editor = editor_table.size() - 1;
+			editor = editors.size() - 1;
 		} else {
 			editor--;
 		}
-	} while (!buttons[editor]->is_visible());
+	} while (!is_editor_enabled(editor));
 
 	select(editor);
 }
@@ -157,8 +187,8 @@ void EditorMainScreen::select_prev() {
 void EditorMainScreen::select_by_name(const String &p_name) {
 	ERR_FAIL_COND(p_name.is_empty());
 
-	for (int i = 0; i < buttons.size(); i++) {
-		if (buttons[i]->get_text() == p_name) {
+	for (unsigned int i = 0; i < editors.size(); i++) {
+		if (editors[i].button && editors[i].button->get_text() == p_name) {
 			select(i);
 			return;
 		}
@@ -172,17 +202,19 @@ void EditorMainScreen::select(int p_index) {
 		return;
 	}
 
-	ERR_FAIL_INDEX(p_index, editor_table.size());
+	ERR_FAIL_INDEX(p_index, (int)editors.size());
 
-	if (!buttons[p_index]->is_visible()) { // Button hidden, no editor.
+	if (!is_editor_enabled(p_index)) {
 		return;
 	}
 
-	for (int i = 0; i < buttons.size(); i++) {
-		buttons[i]->set_pressed_no_signal(i == p_index);
+	for (unsigned int i = 0; i < editors.size(); i++) {
+		if (editors[i].button) {
+			editors[i].button->set_pressed_no_signal((int)i == p_index);
+		}
 	}
 
-	EditorPlugin *new_editor = editor_table[p_index];
+	EditorPlugin *new_editor = editors[p_index].plugin;
 	ERR_FAIL_NULL(new_editor);
 
 	if (selected_plugin == new_editor) {
@@ -192,6 +224,14 @@ void EditorMainScreen::select(int p_index) {
 	if (selected_plugin) {
 		selected_plugin->make_visible(false);
 	}
+
+	bool is_scene_editor = p_index == EDITOR_2D || p_index == EDITOR_3D;
+
+	if (is_scene_editor) {
+		last_scene_editor = (EditorTable)p_index;
+	}
+	
+	scene_button->set_pressed(is_scene_editor);
 
 	selected_plugin = new_editor;
 	selected_plugin->make_visible(true);
@@ -207,9 +247,13 @@ void EditorMainScreen::select(int p_index) {
 	EditorNode::get_singleton()->update_distraction_free_mode();
 }
 
+void EditorMainScreen::select_scene_editor() {
+	select(last_scene_editor);
+}
+
 int EditorMainScreen::get_selected_index() const {
-	for (int i = 0; i < editor_table.size(); i++) {
-		if (selected_plugin == editor_table[i]) {
+	for (unsigned int i = 0; i < editors.size(); i++) {
+		if (selected_plugin == editors[i].plugin) {
 			return i;
 		}
 	}
@@ -218,8 +262,8 @@ int EditorMainScreen::get_selected_index() const {
 
 int EditorMainScreen::get_plugin_index(EditorPlugin *p_editor) const {
 	int screen = -1;
-	for (int i = 0; i < editor_table.size(); i++) {
-		if (p_editor == editor_table[i]) {
+	for (unsigned int i = 0; i < editors.size(); i++) {
+		if (p_editor == editors[i].plugin) {
 			screen = i;
 			break;
 		}
@@ -260,59 +304,72 @@ VBoxContainer *EditorMainScreen::get_control() const {
 }
 
 void EditorMainScreen::add_main_plugin(EditorPlugin *p_editor) {
-	Button *tb = memnew(Button);
-	tb->set_toggle_mode(true);
-	tb->set_theme_type_variation("MainScreenButton");
-	tb->set_name(p_editor->get_plugin_name());
-	tb->set_text(p_editor->get_plugin_name());
+	bool is_scene_editor = editors.size() == EDITOR_2D || editors.size() == EDITOR_3D;
 
-	Ref<Shortcut> shortcut = EditorSettings::get_singleton()->get_shortcut("editor/editor_" + p_editor->get_plugin_name().to_lower());
-	if (shortcut.is_valid()) {
-		tb->set_shortcut(shortcut);
+	bool add_button = !is_scene_editor;
+
+	Button *tb = add_button ? memnew(Button) : nullptr;
+
+	if (tb) {
+		tb->set_toggle_mode(true);
+		tb->set_theme_type_variation("MainScreenButton");
+		tb->set_name(p_editor->get_plugin_name());
+		tb->set_text(p_editor->get_plugin_name());
+
+		Ref<Shortcut> shortcut = EditorSettings::get_singleton()->get_shortcut("editor/editor_" + p_editor->get_plugin_name().to_lower());
+		if (shortcut.is_valid()) {
+			tb->set_shortcut(shortcut);
+		}
+
+		Ref<Texture2D> icon = p_editor->get_plugin_icon();
+		if (icon.is_null() && has_theme_icon(p_editor->get_plugin_name(), EditorStringName(EditorIcons))) {
+			icon = get_editor_theme_icon(p_editor->get_plugin_name());
+		}
+		if (icon.is_valid()) {
+			tb->set_button_icon(icon);
+			// Make sure the control is updated if the icon is reimported.
+			icon->connect_changed(callable_mp((Control *)tb, &Control::update_minimum_size));
+		}
+
+		tb->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select).bind(editors.size()));
+
+		button_hb->add_child(tb);
 	}
 
-	Ref<Texture2D> icon = p_editor->get_plugin_icon();
-	if (icon.is_null() && has_theme_icon(p_editor->get_plugin_name(), EditorStringName(EditorIcons))) {
-		icon = get_editor_theme_icon(p_editor->get_plugin_name());
-	}
-	if (icon.is_valid()) {
-		tb->set_button_icon(icon);
-		// Make sure the control is updated if the icon is reimported.
-		icon->connect_changed(callable_mp((Control *)tb, &Control::update_minimum_size));
-	}
-
-	tb->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select).bind(buttons.size()));
-
-	buttons.push_back(tb);
-	button_hb->add_child(tb);
-	editor_table.push_back(p_editor);
+	editors.push_back(Editor { tb, true, p_editor } );
 	main_editor_plugins.insert(p_editor->get_plugin_name(), p_editor);
 }
 
 void EditorMainScreen::remove_main_plugin(EditorPlugin *p_editor) {
-	// Remove the main editor button and update the bindings of
-	// all buttons behind it to point to the correct main window.
-	for (int i = buttons.size() - 1; i >= 0; i--) {
-		if (p_editor->get_plugin_name() == buttons[i]->get_text()) {
-			if (buttons[i]->is_pressed()) {
-				select(EDITOR_SCRIPT);
-			}
-
-			memdelete(buttons[i]);
-			buttons.remove_at(i);
-
-			break;
-		} else {
-			buttons[i]->disconnect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select));
-			buttons[i]->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select).bind(i - 1));
+	// Unbind all buttons in advance (as indexes are about to change)
+	for (Editor &editor : editors) {
+		if (editor.button) {
+			editor.button->disconnect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select));
 		}
 	}
 
-	if (selected_plugin == p_editor) {
-		selected_plugin = nullptr;
+	int index = get_plugin_index(p_editor);
+	if (index >= 0) {
+		Button *button = editors[index].button;
+
+		if (button) {
+			if (button->is_pressed()) {
+				select(EDITOR_SCRIPT);
+			}
+			memdelete(button);
+			editors.remove_at(index);
+		}
+
+		editors.remove_at(index);
 	}
 
-	editor_table.erase(p_editor);
+	// Rebind buttons after with correct indexes
+	for (unsigned int i = 0; i < editors.size(); i++) {
+		if (editors[i].button) {
+			editors[i].button->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select).bind(i));
+		}
+	}
+
 	main_editor_plugins.erase(p_editor->get_plugin_name());
 }
 

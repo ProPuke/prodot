@@ -4323,6 +4323,8 @@ void CanvasItemEditor::set_current_tool(Tool p_tool) {
 }
 
 void CanvasItemEditor::_update_editor_settings() {
+	view_2d_button->set_button_icon(get_editor_theme_icon(SNAME("2DNodes")));
+	view_3d_button->set_button_icon(get_editor_theme_icon(SNAME("Node3D")));
 	button_center_view->set_button_icon(get_editor_theme_icon(SNAME("CenterView")));
 	select_button->set_button_icon(get_editor_theme_icon(SNAME("ToolSelect")));
 	scene_paint_button->set_button_icon(get_editor_theme_icon(SNAME("Paint")));
@@ -4679,6 +4681,15 @@ void CanvasItemEditor::_update_oversampling() {
 
 void CanvasItemEditor::_shortcut_zoom_set(real_t p_zoom) {
 	_zoom_on_position(p_zoom * MAX(1, EDSCALE), viewport->get_local_mouse_position());
+}
+
+void CanvasItemEditor::_button_2d() {
+	view_2d_button->set_pressed(true);
+}
+
+void CanvasItemEditor::_button_3d() {
+	view_3d_button->set_pressed(false);
+	EditorNode::get_singleton()->get_editor_main_screen()->select(EditorMainScreen::EDITOR_3D);
 }
 
 void CanvasItemEditor::_button_toggle_local_space(bool p_status) {
@@ -5750,6 +5761,30 @@ CanvasItemEditor::CanvasItemEditor() {
 	v_scroll->hide();
 
 	viewport->add_child(controls_vb);
+
+	view_2d_button = memnew(Button);
+	main_menu_hbox->add_child(view_2d_button);
+	view_2d_button->set_text(TTRC("2D"));
+	view_2d_button->set_toggle_mode(true);
+	view_2d_button->set_theme_type_variation("FlatButtonNoIconTint");
+	view_2d_button->set_pressed(true);
+	view_2d_button->connect(SceneStringName(pressed), callable_mp(this, &CanvasItemEditor::_button_2d));
+	view_2d_button->set_shortcut(ED_SHORTCUT("editor/editor_2d", TTRC("2D View"), KeyModifierMask::CTRL | Key::F1, true));
+	view_2d_button->set_shortcut_context(this);
+	view_2d_button->set_accessibility_name(TTRC("2D View"));
+
+	view_3d_button = memnew(Button);
+	main_menu_hbox->add_child(view_3d_button);
+	view_3d_button->set_text(TTRC("3D"));
+	view_3d_button->set_toggle_mode(true);
+	view_3d_button->set_theme_type_variation("FlatButtonNoIconTint");
+	view_3d_button->set_pressed(false);
+	view_3d_button->connect(SceneStringName(pressed), callable_mp(this, &CanvasItemEditor::_button_3d));
+	view_3d_button->set_shortcut(ED_SHORTCUT("editor/editor_23", TTRC("3D View"), KeyModifierMask::CTRL | Key::F2, true));
+	view_3d_button->set_shortcut_context(this);
+	view_3d_button->set_accessibility_name(TTRC("3D View"));
+
+	main_menu_hbox->add_child(memnew(VSeparator));
 
 	select_button = memnew(Button);
 	select_button->set_tooltip_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);

@@ -51,13 +51,21 @@ public:
 	};
 
 private:
+	struct Editor {
+		Button *button;
+		bool enabled;
+		EditorPlugin *plugin;
+	};
+
 	VBoxContainer *main_screen_vbox = nullptr;
 	EditorPlugin *selected_plugin = nullptr;
 
 	HBoxContainer *button_hb = nullptr;
-	Vector<Button *> buttons;
-	Vector<EditorPlugin *> editor_table;
+	Button *scene_button = nullptr;
+	LocalVector<Editor> editors;
 	HashMap<String, EditorPlugin *> main_editor_plugins;
+
+	EditorTable last_scene_editor = EDITOR_2D;
 
 	int _get_current_main_editor() const;
 
@@ -70,13 +78,14 @@ public:
 	void save_layout_to_config(Ref<ConfigFile> p_config_file, const String &p_section) const;
 	void load_layout_from_config(Ref<ConfigFile> p_config_file, const String &p_section);
 
-	void set_button_enabled(int p_index, bool p_enabled);
-	bool is_button_enabled(int p_index) const;
+	void set_editor_enabled(int p_index, bool p_enabled);
+	bool is_editor_enabled(int p_index) const;
 
 	void select_next();
 	void select_prev();
 	void select_by_name(const String &p_name);
 	void select(int p_index);
+	void select_scene_editor();
 	int get_selected_index() const;
 	int get_plugin_index(EditorPlugin *p_editor) const;
 	EditorPlugin *get_selected_plugin() const;
