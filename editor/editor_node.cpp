@@ -4971,6 +4971,7 @@ Error EditorNode::open_scene(const String &p_scene, bool p_ignore_broken_deps, b
 		for (int i = 0; i < editor_data.get_edited_scene_count(); i++) {
 			if (editor_data.get_scene_path(i) == lpath) {
 				_set_current_scene(i);
+				editor_main_screen->select_scene_editor();
 				scene_tabs->update_scene_tabs();
 				return OK;
 			}
@@ -4985,6 +4986,8 @@ Error EditorNode::open_scene(const String &p_scene, bool p_ignore_broken_deps, b
 	int current_scene_idx = editor_data.get_edited_scene_count() - 1;
 	Node *new_scene = editor_data.get_edited_scene_root(current_scene_idx);
 	ERR_FAIL_NULL_V(new_scene, ERR_BUG);
+
+	editor_main_screen->select_scene_editor();
 
 	_set_current_scene_nocheck(current_scene_idx);
 

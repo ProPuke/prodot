@@ -230,7 +230,7 @@ void EditorMainScreen::select(int p_index) {
 	if (is_scene_editor) {
 		last_scene_editor = (EditorTable)p_index;
 	}
-	
+
 	scene_button->set_pressed(is_scene_editor);
 
 	selected_plugin = new_editor;
@@ -336,7 +336,7 @@ void EditorMainScreen::add_main_plugin(EditorPlugin *p_editor) {
 		button_hb->add_child(tb);
 	}
 
-	editors.push_back(Editor { tb, true, p_editor } );
+	editors.push_back(Editor{ tb, true, p_editor });
 	main_editor_plugins.insert(p_editor->get_plugin_name(), p_editor);
 }
 
