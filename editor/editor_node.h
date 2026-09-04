@@ -84,11 +84,13 @@ class EditorLayoutsDialog;
 class EditorLog;
 class EditorMainScreen;
 class EditorNativeShaderSourceVisualizer;
+class EditorPlaceholderTabs;
 class EditorPluginList;
 class EditorResourcePreview;
 class EditorResourceConversionPlugin;
 class EditorRunBar;
 class EditorSceneTabs;
+class EditorScriptTabs;
 class EditorSelectionHistory;
 class EditorSettingsDialog;
 class EditorTitleBar;
@@ -309,7 +311,10 @@ private:
 	DockSplitContainer *center_split = nullptr;
 
 	// Main tabs.
+	HBoxContainer *tabs_container = nullptr;
 	EditorSceneTabs *scene_tabs = nullptr;
+	EditorScriptTabs *script_tabs = nullptr;
+	EditorPlaceholderTabs *placeholder_tabs = nullptr;
 
 	int tab_closing_idx = 0;
 	List<String> tabs_to_close;
@@ -674,6 +679,8 @@ private:
 
 	void _toggle_distraction_free_mode();
 
+	void _editor_changed();
+
 	void _inherit_imported(const String &p_action);
 	void _open_imported();
 
@@ -756,6 +763,7 @@ public:
 	static EditorBottomPanel *get_bottom_panel() { return singleton->bottom_panel; }
 	static EditorMainScreen *get_editor_main_screen() { return singleton->editor_main_screen; }
 
+	static void add_tabs_button(Button *button);
 	static Button *get_distraction_free_button() { return singleton->distraction_free; }
 
 	static String adjust_scene_name_casing(const String &p_root_name);

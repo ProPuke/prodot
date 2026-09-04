@@ -474,6 +474,7 @@ ScreenSelect::ScreenSelect() {
 	const Size2 borders = Size2(4, 4) * EDSCALE;
 
 	popup = memnew(PopupPanel);
+	popup->set_flag(Window::FLAG_BORDERLESS, true);
 	popup->connect("popup_hide", callable_mp(static_cast<BaseButton *>(this), &ScreenSelect::set_pressed).bind(false));
 	add_child(popup);
 

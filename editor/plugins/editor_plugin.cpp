@@ -356,6 +356,10 @@ void EditorPlugin::set_plugin_version(const String &p_version) {
 	plugin_version = p_version;
 }
 
+EditorPlugin::Context EditorPlugin::get_plugin_context() const {
+	return CONTEXT_NONE;
+}
+
 bool EditorPlugin::has_main_screen() const {
 	bool success = false;
 	GDVIRTUAL_CALL(_has_main_screen, success);

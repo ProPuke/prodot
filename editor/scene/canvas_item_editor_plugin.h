@@ -648,6 +648,7 @@ protected:
 
 public:
 	virtual String get_plugin_name() const override { return TTRC("2D"); }
+	virtual Context get_plugin_context() const override { return CONTEXT_SCENES; }
 	bool has_main_screen() const override { return true; }
 	virtual void edit(Object *p_object) override;
 	virtual bool handles(Object *p_object) const override;

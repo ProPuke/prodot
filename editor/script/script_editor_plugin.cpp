@@ -64,6 +64,7 @@
 #include "editor/inspector/editor_context_menu_plugin.h"
 #include "editor/run/editor_run_bar.h"
 #include "editor/scene/editor_scene_tabs.h"
+#include "editor/scene/editor_script_tabs.h"
 #include "editor/script/find_in_files.h"
 #include "editor/script/script_text_editor.h"
 #include "editor/script/syntax_highlighters.h"
@@ -519,6 +520,24 @@ void ScriptEditor::_open_recent_script(int p_idx) {
 void ScriptEditor::_show_error_dialog(const String &p_path) {
 	error_dialog->set_text(vformat(TTR("Can't open '%s'. The file could have been moved or deleted."), p_path));
 	error_dialog->popup_centered();
+}
+
+void ScriptEditor::open_new_script_dialog() {
+	script_create_dialog->config("Node", "new_script", false, false);
+	script_create_dialog->popup_centered();
+}
+
+void ScriptEditor::open_new_text_dialog() {
+	file_dialog->set_file_mode(EditorFileDialog::FILE_MODE_SAVE_FILE);
+	file_dialog->set_access(EditorFileDialog::ACCESS_FILESYSTEM);
+	file_dialog_option = FILE_MENU_NEW_TEXTFILE;
+
+	file_dialog->clear_filters();
+	for (const String &E : textfile_extensions) {
+		file_dialog->add_filter("*." + E, E.to_upper());
+	}
+	file_dialog->set_title(TTRC("New Text File..."));
+	file_dialog->popup_file_dialog();
 }
 
 void ScriptEditor::_close_tab(int p_idx, bool p_save, bool p_history_back) {
@@ -1018,20 +1037,10 @@ void ScriptEditor::_menu_option(int p_option) {
 	ScriptEditorBase *current = _get_current_editor();
 	switch (p_option) {
 		case FILE_MENU_NEW_SCRIPT: {
-			script_create_dialog->config("Node", "new_script", false, false);
-			script_create_dialog->popup_centered();
+			open_new_script_dialog();
 		} break;
 		case FILE_MENU_NEW_TEXTFILE: {
-			file_dialog->set_file_mode(EditorFileDialog::FILE_MODE_SAVE_FILE);
-			file_dialog->set_access(EditorFileDialog::ACCESS_FILESYSTEM);
-			file_dialog_option = FILE_MENU_NEW_TEXTFILE;
-
-			file_dialog->clear_filters();
-			for (const String &E : textfile_extensions) {
-				file_dialog->add_filter("*." + E, E.to_upper());
-			}
-			file_dialog->set_title(TTRC("New Text File..."));
-			file_dialog->popup_file_dialog();
+			open_new_text_dialog();
 		} break;
 		case FILE_MENU_OPEN: {
 			file_dialog->set_file_mode(EditorFileDialog::FILE_MODE_OPEN_FILE);
@@ -4204,8 +4213,10 @@ void ScriptEditorPlugin::_save_last_editor(const String &p_editor) {
 void ScriptEditorPlugin::_window_visibility_changed(bool p_visible) {
 	_focus_another_editor();
 	if (p_visible) {
+		script_tabs->set_visible(true);
 		script_editor->add_theme_style_override(SceneStringName(panel), script_editor->get_theme_stylebox("ScriptEditorPanelFloating", EditorStringName(EditorStyles)));
 	} else {
+		script_tabs->set_visible(false);
 		script_editor->add_theme_style_override(SceneStringName(panel), script_editor->get_theme_stylebox("ScriptEditorPanel", EditorStringName(EditorStyles)));
 	}
 }
@@ -4437,9 +4448,19 @@ ScriptEditorPlugin::ScriptEditorPlugin() {
 	window_wrapper = memnew(WindowWrapper);
 	window_wrapper->set_margins_enabled(true);
 
-	script_editor = memnew(ScriptEditor(window_wrapper));
+	VBoxContainer *vbox = memnew(VBoxContainer);
+	vbox->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+
 	Ref<Shortcut> make_floating_shortcut = ED_SHORTCUT_AND_COMMAND("script_editor/make_floating", TTRC("Make Floating"));
-	window_wrapper->set_wrapped_control(script_editor, make_floating_shortcut);
+	window_wrapper->set_wrapped_control(vbox, make_floating_shortcut);
+
+	script_tabs = memnew(EditorScriptTabs);
+	script_tabs->set_visible(false);
+
+	script_editor = memnew(ScriptEditor(window_wrapper));
+	script_editor->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	vbox->add_child(script_tabs);
+	vbox->add_child(script_editor);
 
 	EditorNode::get_singleton()->get_editor_main_screen()->get_control()->add_child(window_wrapper);
 	window_wrapper->set_v_size_flags(Control::SIZE_EXPAND_FILL);
@@ -4447,4 +4468,6 @@ ScriptEditorPlugin::ScriptEditorPlugin() {
 	window_wrapper->connect("window_visibility_changed", callable_mp(this, &ScriptEditorPlugin::_window_visibility_changed));
 
 	ScriptServer::set_reload_scripts_on_save(EDITOR_GET("text_editor/behavior/files/auto_reload_and_parse_scripts_on_save"));
+
+	script_tabs->init();
 }

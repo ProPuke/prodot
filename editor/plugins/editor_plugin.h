@@ -110,6 +110,12 @@ public:
 		AFTER_GUI_INPUT_CUSTOM,
 	};
 
+	enum Context {
+		CONTEXT_NONE,
+		CONTEXT_SCENES,
+		CONTEXT_SCRIPTS,
+	};
+
 protected:
 	void _notification(int p_what);
 
@@ -197,6 +203,7 @@ public:
 	virtual const Ref<Texture2D> get_plugin_icon() const;
 	virtual String get_plugin_version() const;
 	virtual void set_plugin_version(const String &p_version);
+	virtual Context get_plugin_context() const;
 	virtual bool has_main_screen() const;
 	virtual void make_visible(bool p_visible);
 	virtual void set_current() {}

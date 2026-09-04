@@ -53,6 +53,7 @@ class VSplitContainer;
 class WindowWrapper;
 class EditorSyntaxHighlighter;
 class ScriptEditorBase;
+class EditorScriptTabs;
 
 class ScriptEditorQuickOpen : public ConfirmationDialog {
 	GDCLASS(ScriptEditorQuickOpen, ConfirmationDialog);
@@ -78,6 +79,7 @@ public:
 };
 
 class EditorScriptCodeCompletionCache;
+class EditorScriptTabs;
 class FindInFiles;
 
 class ScriptEditor : public PanelContainer {
@@ -147,6 +149,8 @@ class ScriptEditor : public PanelContainer {
 		DISPLAY_DIR_AND_NAME,
 		DISPLAY_FULL_PATH,
 	};
+
+	friend class EditorScriptTabs;
 
 	HBoxContainer *menu_hb = nullptr;
 	MenuButton *file_menu = nullptr;
@@ -408,6 +412,8 @@ public:
 	void open_find_in_files_dialog(const String &p_initial_text = "", bool p_replace = false);
 	void open_script_create_dialog(const String &p_base_name, const String &p_base_path);
 	void open_text_file_create_dialog(const String &p_base_path, const String &p_base_name = "");
+	void open_new_script_dialog();
+	void open_new_text_dialog();
 	Ref<Resource> open_file(const String &p_file);
 	Error close_file(const String &p_file);
 
@@ -466,6 +472,7 @@ public:
 class ScriptEditorPlugin : public EditorPlugin {
 	GDCLASS(ScriptEditorPlugin, EditorPlugin);
 
+	EditorScriptTabs *script_tabs = nullptr;
 	ScriptEditor *script_editor = nullptr;
 	WindowWrapper *window_wrapper = nullptr;
 
@@ -483,6 +490,7 @@ public:
 	static bool open_in_external_editor(const String &p_path, int p_line, int p_col, bool p_ignore_project = false);
 
 	virtual String get_plugin_name() const override { return TTRC("Script"); }
+	virtual Context get_plugin_context() const override { return CONTEXT_SCRIPTS; }
 	bool has_main_screen() const override { return true; }
 	virtual void edit(Object *p_object) override;
 	virtual bool handles(Object *p_object) const override;

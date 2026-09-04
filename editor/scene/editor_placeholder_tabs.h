@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  editor_main_screen.h                                                  */
+/*  editor_placeholder_tabs.h                                             */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -30,74 +30,36 @@
 
 #pragma once
 
-#include "scene/gui/panel_container.h"
+#include "scene/gui/margin_container.h"
 
 class Button;
-class ConfigFile;
-class EditorPlugin;
 class HBoxContainer;
-class VBoxContainer;
+class MenuButton;
+class Panel;
+class PanelContainer;
+class PopupMenu;
+class TabBar;
+class TextureRect;
 
-class EditorMainScreen : public PanelContainer {
-	GDCLASS(EditorMainScreen, PanelContainer);
+class EditorPlaceholderTabs : public MarginContainer {
+	GDCLASS(EditorPlaceholderTabs, MarginContainer);
 
-public:
-	enum EditorTable {
-		EDITOR_2D = 0,
-		EDITOR_3D,
-		EDITOR_SCRIPT,
-		EDITOR_GAME,
-		EDITOR_ASSETLIB,
-	};
+	inline static EditorPlaceholderTabs *singleton = nullptr;
 
 private:
-	struct Editor {
-		Button *button;
-		bool enabled;
-		EditorPlugin *plugin;
-	};
+	PanelContainer *tabbar_panel = nullptr;
+	HBoxContainer *tabbar_container = nullptr;
 
-	VBoxContainer *main_screen_vbox = nullptr;
-	EditorPlugin *selected_plugin = nullptr;
-
-	HBoxContainer *button_hb = nullptr;
-	Button *scene_button = nullptr;
-	LocalVector<Editor> editors;
-	HashMap<String, EditorPlugin *> main_editor_plugins;
-
-	EditorTable last_scene_editor = EDITOR_2D;
-
-	int _get_current_main_editor() const;
+	TabBar *tabs = nullptr;
 
 protected:
-	static void _bind_methods();
 	void _notification(int p_what);
 
 public:
-	void set_button_container(HBoxContainer *p_button_hb);
+	static EditorPlaceholderTabs *get_singleton() { return singleton; }
 
-	void save_layout_to_config(Ref<ConfigFile> p_config_file, const String &p_section) const;
-	void load_layout_from_config(Ref<ConfigFile> p_config_file, const String &p_section);
+	void set_title(const String &title, Ref<Texture2D> icon);
+	void add_extra_button(Button *p_button);
 
-	void set_editor_enabled(int p_index, bool p_enabled);
-	bool is_editor_enabled(int p_index) const;
-
-	void select_next();
-	void select_prev();
-	void select_by_name(const String &p_name);
-	void select(int p_index, bool p_force = false);
-	void select_scene_editor(bool p_autoselect = false, bool p_force = false);
-	EditorTable get_last_scene_editor() { return last_scene_editor; }
-	int get_selected_index() const;
-	int get_plugin_index(EditorPlugin *p_editor) const;
-	EditorPlugin *get_selected_plugin() const;
-	EditorPlugin *get_plugin_by_name(const String &p_plugin_name) const;
-	bool can_auto_switch_screens() const;
-
-	VBoxContainer *get_control() const;
-
-	void add_main_plugin(EditorPlugin *p_editor);
-	void remove_main_plugin(EditorPlugin *p_editor);
-
-	EditorMainScreen();
+	EditorPlaceholderTabs();
 };

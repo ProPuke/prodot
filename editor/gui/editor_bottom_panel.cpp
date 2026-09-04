@@ -222,7 +222,7 @@ void EditorBottomPanel::_expand_button_toggled(bool p_pressed) {
 		bottom_hbox->move_child(distraction_free, -3);
 	} else {
 		distraction_free->get_parent()->remove_child(distraction_free);
-		EditorSceneTabs::get_singleton()->add_extra_button(distraction_free);
+		EditorNode::get_singleton()->add_tabs_button(distraction_free);
 	}
 	_theme_changed();
 }

@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  editor_main_screen.h                                                  */
+/*  editor_script_tabs.h                                                  */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -30,74 +30,85 @@
 
 #pragma once
 
-#include "scene/gui/panel_container.h"
+#include "scene/gui/margin_container.h"
 
 class Button;
-class ConfigFile;
-class EditorPlugin;
 class HBoxContainer;
-class VBoxContainer;
+class MenuButton;
+class Panel;
+class PanelContainer;
+class PopupMenu;
+class TabBar;
+class TextureRect;
 
-class EditorMainScreen : public PanelContainer {
-	GDCLASS(EditorMainScreen, PanelContainer);
+class EditorScriptTabs : public MarginContainer {
+	GDCLASS(EditorScriptTabs, MarginContainer);
+
+	inline static EditorScriptTabs *singleton = nullptr;
 
 public:
-	enum EditorTable {
-		EDITOR_2D = 0,
-		EDITOR_3D,
-		EDITOR_SCRIPT,
-		EDITOR_GAME,
-		EDITOR_ASSETLIB,
+	enum {
+		SCRIPT_NEW_SCRIPT,
+		SCRIPT_NEW_TEXT,
+		SCRIPT_SAVE,
+		SCRIPT_SAVE_AS,
+		SCRIPT_SAVE_ALL,
+		SCRIPT_SHOW_IN_FILESYSTEM,
+		SCRIPT_CLOSE,
+		SCRIPT_CLOSE_OTHERS,
+		SCRIPT_CLOSE_RIGHT,
+		SCRIPT_CLOSE_ALL,
 	};
 
 private:
-	struct Editor {
-		Button *button;
-		bool enabled;
-		EditorPlugin *plugin;
-	};
+	bool _updating = false;
 
-	VBoxContainer *main_screen_vbox = nullptr;
-	EditorPlugin *selected_plugin = nullptr;
+	PanelContainer *tabbar_panel = nullptr;
+	HBoxContainer *tabbar_container = nullptr;
 
-	HBoxContainer *button_hb = nullptr;
-	Button *scene_button = nullptr;
-	LocalVector<Editor> editors;
-	HashMap<String, EditorPlugin *> main_editor_plugins;
+	TabBar *script_tabs = nullptr;
+	PopupMenu *script_tabs_context_menu = nullptr;
+	MenuButton *script_list = nullptr;
+	Button *script_tab_add = nullptr;
+	Control *script_tab_add_ph = nullptr;
 
-	EditorTable last_scene_editor = EDITOR_2D;
+	int last_hovered_tab = -1;
 
-	int _get_current_main_editor() const;
+	void _script_tab_changed(int p_tab);
+	void _script_tab_closed(int p_tab);
+	void _scene_tab_input(const Ref<InputEvent> &p_input);
+	void _script_tabs_resized();
+
+	void _update_tab_titles();
+	void _reposition_active_tab(int p_to_index);
+	void _update_context_menu();
+	void _custom_menu_option(int p_option);
+	void _update_script_list();
+
+	void _script_list_changed();
+
+	void _new_script();
+	void _new_text();
+
+	void _menu_option(int p_option);
+
+	virtual void shortcut_input(const Ref<InputEvent> &p_event) override;
 
 protected:
-	static void _bind_methods();
 	void _notification(int p_what);
 
 public:
-	void set_button_container(HBoxContainer *p_button_hb);
+	static EditorScriptTabs *get_singleton() { return singleton; }
 
-	void save_layout_to_config(Ref<ConfigFile> p_config_file, const String &p_section) const;
-	void load_layout_from_config(Ref<ConfigFile> p_config_file, const String &p_section);
+	void init();
 
-	void set_editor_enabled(int p_index, bool p_enabled);
-	bool is_editor_enabled(int p_index) const;
+	void add_extra_button(Button *p_button);
 
-	void select_next();
-	void select_prev();
-	void select_by_name(const String &p_name);
-	void select(int p_index, bool p_force = false);
-	void select_scene_editor(bool p_autoselect = false, bool p_force = false);
-	EditorTable get_last_scene_editor() { return last_scene_editor; }
-	int get_selected_index() const;
-	int get_plugin_index(EditorPlugin *p_editor) const;
-	EditorPlugin *get_selected_plugin() const;
-	EditorPlugin *get_plugin_by_name(const String &p_plugin_name) const;
-	bool can_auto_switch_screens() const;
+	void set_current_tab(int p_tab);
+	int get_current_tab() const;
+	int get_option_tab() const;
 
-	VBoxContainer *get_control() const;
+	void update_script_tabs();
 
-	void add_main_plugin(EditorPlugin *p_editor);
-	void remove_main_plugin(EditorPlugin *p_editor);
-
-	EditorMainScreen();
+	EditorScriptTabs();
 };

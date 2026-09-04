@@ -245,6 +245,8 @@ void EditorMainScreen::select(int p_index, bool p_force) {
 	}
 
 	EditorNode::get_singleton()->update_distraction_free_mode();
+
+	emit_signal(SNAME("editor_changed"));
 }
 
 void EditorMainScreen::select_scene_editor(bool p_autoselect, bool p_force) {
@@ -377,6 +379,10 @@ void EditorMainScreen::remove_main_plugin(EditorPlugin *p_editor) {
 	}
 
 	main_editor_plugins.erase(p_editor->get_plugin_name());
+}
+
+void EditorMainScreen::_bind_methods() {
+	ADD_SIGNAL(MethodInfo("editor_changed"));
 }
 
 EditorMainScreen::EditorMainScreen() {

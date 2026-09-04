@@ -129,7 +129,9 @@
 #include "editor/scene/3d/node_3d_editor_plugin.h"
 #include "editor/scene/3d/root_motion_editor_plugin.h"
 #include "editor/scene/canvas_item_editor_plugin.h"
+#include "editor/scene/editor_placeholder_tabs.h"
 #include "editor/scene/editor_scene_tabs.h"
+#include "editor/scene/editor_script_tabs.h"
 #include "editor/scene/material_editor_plugin.h"
 #include "editor/scene/particle_process_material_editor_plugin.h"
 #include "editor/script/editor_script.h"
@@ -3954,6 +3956,10 @@ void EditorNode::_menu_option_confirm(int p_option, bool p_confirmed) {
 	}
 }
 
+void EditorNode::add_tabs_button(Button *button) {
+	singleton->tabs_container->add_child(button);
+}
+
 String EditorNode::adjust_scene_name_casing(const String &p_root_name) {
 	switch (GLOBAL_GET("editor/naming/scene_name_casing").operator int()) {
 		case SCENE_NAME_CASING_AUTO:
@@ -6874,6 +6880,20 @@ void EditorNode::_toggle_distraction_free_mode() {
 	}
 }
 
+void EditorNode::_editor_changed() {
+	EditorPlugin *plugin = editor_main_screen->get_selected_plugin();
+	Ref<Texture2D> icon = plugin->get_plugin_icon();
+	if (icon.is_null() && editor_main_screen->has_theme_icon(plugin->get_plugin_name(), EditorStringName(EditorIcons))) {
+		icon = editor_main_screen->get_editor_theme_icon(plugin->get_plugin_name());
+	}
+	EditorPlugin::Context context = plugin->get_plugin_context();
+
+	scene_tabs->set_visible(context == EditorPlugin::CONTEXT_SCENES);
+	placeholder_tabs->set_visible(context == EditorPlugin::CONTEXT_NONE);
+	script_tabs->set_visible(context == EditorPlugin::CONTEXT_SCRIPTS);
+	placeholder_tabs->set_title(plugin->get_plugin_name(), icon);
+}
+
 void EditorNode::update_distraction_free_mode() {
 	if (!EDITOR_GET("interface/editor/behavior/separate_distraction_mode")) {
 		return;
@@ -8855,10 +8875,23 @@ EditorNode::EditorNode() {
 	srt->add_theme_constant_override("separation", 0);
 	top_split->add_child(srt);
 
+	tabs_container = memnew(HBoxContainer);
+	srt->add_child(tabs_container);
+
 	scene_tabs = memnew(EditorSceneTabs);
-	srt->add_child(scene_tabs);
+	scene_tabs->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	tabs_container->add_child(scene_tabs);
 	scene_tabs->connect("tab_changed", callable_mp(this, &EditorNode::_set_current_scene));
 	scene_tabs->connect("tab_closed", callable_mp(this, &EditorNode::_scene_tab_closed));
+
+	script_tabs = memnew(EditorScriptTabs);
+	script_tabs->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	tabs_container->add_child(script_tabs);
+
+	placeholder_tabs = memnew(EditorPlaceholderTabs);
+	placeholder_tabs->set_visible(false);
+	placeholder_tabs->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	tabs_container->add_child(placeholder_tabs);
 
 	distraction_free = memnew(Button);
 	distraction_free->set_theme_type_variation("FlatMenuButton");
@@ -8868,7 +8901,7 @@ EditorNode::EditorNode() {
 	distraction_free->set_shortcut(ED_GET_SHORTCUT("editor/distraction_free_mode"));
 	distraction_free->set_tooltip_text(TTRC("Toggle distraction-free mode."));
 	distraction_free->set_toggle_mode(true);
-	scene_tabs->add_extra_button(distraction_free);
+	add_tabs_button(distraction_free);
 	distraction_free->connect(SceneStringName(pressed), callable_mp(this, &EditorNode::_toggle_distraction_free_mode));
 
 	editor_main_screen = memnew(EditorMainScreen);
@@ -8876,6 +8909,7 @@ EditorNode::EditorNode() {
 	editor_main_screen->set_draw_behind_parent(true);
 	srt->add_child(editor_main_screen);
 	editor_main_screen->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	editor_main_screen->connect("editor_changed", callable_mp(this, &EditorNode::_editor_changed));
 
 	scene_root = memnew(SubViewport);
 	scene_root->set_auto_translate_mode(AUTO_TRANSLATE_MODE_ALWAYS);
@@ -9409,6 +9443,8 @@ EditorNode::EditorNode() {
 	if (!Engine::get_singleton()->is_recovery_mode_hint()) {
 		add_editor_plugin(get_game_view_plugin());
 	}
+
+	script_tabs->init();
 
 	EditorAudioBuses *audio_bus_editor = EditorAudioBuses::register_editor();
 

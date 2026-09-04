@@ -1067,6 +1067,7 @@ class Node3DEditorPlugin : public EditorPlugin {
 public:
 	Node3DEditor *get_spatial_editor() { return spatial_editor; }
 	virtual String get_plugin_name() const override { return TTRC("3D"); }
+	virtual Context get_plugin_context() const override { return CONTEXT_SCENES; }
 	bool has_main_screen() const override { return true; }
 	virtual void make_visible(bool p_visible) override;
 	virtual void edit(Object *p_object) override;

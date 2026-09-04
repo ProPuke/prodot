@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  editor_main_screen.h                                                  */
+/*  editor_placeholder_tabs.cpp                                           */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,76 +28,58 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#pragma once
+#include "editor_placeholder_tabs.h"
 
+#include "core/object/callable_mp.h"
+#include "editor/editor_node.h"
+#include "editor/editor_string_names.h"
+#include "editor/settings/editor_settings.h"
+#include "editor/themes/editor_scale.h"
+#include "scene/gui/box_container.h"
+#include "scene/gui/button.h"
+#include "scene/gui/panel.h"
 #include "scene/gui/panel_container.h"
+#include "scene/gui/tab_bar.h"
 
-class Button;
-class ConfigFile;
-class EditorPlugin;
-class HBoxContainer;
-class VBoxContainer;
+void EditorPlaceholderTabs::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_THEME_CHANGED: {
+			tabbar_panel->add_theme_style_override(SceneStringName(panel), get_theme_stylebox(SNAME("tabbar_background"), SNAME("TabContainer")));
+			tabs->add_theme_constant_override("icon_max_width", get_theme_constant(SNAME("class_icon_size"), EditorStringName(Editor)));
+		} break;
 
-class EditorMainScreen : public PanelContainer {
-	GDCLASS(EditorMainScreen, PanelContainer);
+		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
+			if (EditorSettings::get_singleton()->check_changed_settings_in_group("interface/scene_tabs")) {
+				tabs->set_max_tab_width(int(EDITOR_GET("interface/scene_tabs/maximum_width")) * EDSCALE);
+			}
+		} break;
+	}
+}
 
-public:
-	enum EditorTable {
-		EDITOR_2D = 0,
-		EDITOR_3D,
-		EDITOR_SCRIPT,
-		EDITOR_GAME,
-		EDITOR_ASSETLIB,
-	};
+void EditorPlaceholderTabs::set_title(const String &title, Ref<Texture2D> icon) {
+	tabs->set_tab_title(0, title);
+	tabs->set_tab_icon(0, icon);
+}
 
-private:
-	struct Editor {
-		Button *button;
-		bool enabled;
-		EditorPlugin *plugin;
-	};
+void EditorPlaceholderTabs::add_extra_button(Button *p_button) {
+	tabbar_container->add_child(p_button);
+}
 
-	VBoxContainer *main_screen_vbox = nullptr;
-	EditorPlugin *selected_plugin = nullptr;
+EditorPlaceholderTabs::EditorPlaceholderTabs() {
+	singleton = this;
 
-	HBoxContainer *button_hb = nullptr;
-	Button *scene_button = nullptr;
-	LocalVector<Editor> editors;
-	HashMap<String, EditorPlugin *> main_editor_plugins;
+	set_process_shortcut_input(true);
+	set_process_unhandled_key_input(true);
 
-	EditorTable last_scene_editor = EDITOR_2D;
+	tabbar_panel = memnew(PanelContainer);
+	add_child(tabbar_panel);
+	tabbar_container = memnew(HBoxContainer);
+	tabbar_panel->add_child(tabbar_container);
 
-	int _get_current_main_editor() const;
-
-protected:
-	static void _bind_methods();
-	void _notification(int p_what);
-
-public:
-	void set_button_container(HBoxContainer *p_button_hb);
-
-	void save_layout_to_config(Ref<ConfigFile> p_config_file, const String &p_section) const;
-	void load_layout_from_config(Ref<ConfigFile> p_config_file, const String &p_section);
-
-	void set_editor_enabled(int p_index, bool p_enabled);
-	bool is_editor_enabled(int p_index) const;
-
-	void select_next();
-	void select_prev();
-	void select_by_name(const String &p_name);
-	void select(int p_index, bool p_force = false);
-	void select_scene_editor(bool p_autoselect = false, bool p_force = false);
-	EditorTable get_last_scene_editor() { return last_scene_editor; }
-	int get_selected_index() const;
-	int get_plugin_index(EditorPlugin *p_editor) const;
-	EditorPlugin *get_selected_plugin() const;
-	EditorPlugin *get_plugin_by_name(const String &p_plugin_name) const;
-	bool can_auto_switch_screens() const;
-
-	VBoxContainer *get_control() const;
-
-	void add_main_plugin(EditorPlugin *p_editor);
-	void remove_main_plugin(EditorPlugin *p_editor);
-
-	EditorMainScreen();
-};
+	tabs = memnew(TabBar);
+	tabs->set_max_tab_width(int(EDITOR_GET("interface/scene_tabs/maximum_width")) * EDSCALE);
+	tabs->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+	tabs->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	tabs->set_tab_count(1);
+	tabbar_container->add_child(tabs);
+}
