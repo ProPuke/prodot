@@ -198,8 +198,8 @@ private:
 	int selected_focusable;
 	bool deferred_drag_mode = false;
 
-	float split_ratio = 0.5;
-	float name_fixed_size = 0.0;
+	float split_ratio = 0.15;
+	float name_fixed_size = 100.0;
 
 	Vector<Control *> focusables;
 	Control *label_reference = nullptr;

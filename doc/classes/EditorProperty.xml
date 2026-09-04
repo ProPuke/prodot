@@ -127,7 +127,7 @@
 		<member name="label" type="String" setter="set_label" getter="get_label" default="&quot;&quot;">
 			Set this property to change the label (if you want to show one).
 		</member>
-		<member name="name_split_ratio" type="float" setter="set_name_split_ratio" getter="get_name_split_ratio" default="0.5">
+		<member name="name_split_ratio" type="float" setter="set_name_split_ratio" getter="get_name_split_ratio" default="0.15">
 			Space distribution ratio between the label and the editing field.
 		</member>
 		<member name="read_only" type="bool" setter="set_read_only" getter="is_read_only" default="false" keywords="enabled, disabled, editable">
