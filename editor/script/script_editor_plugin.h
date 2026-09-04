@@ -197,9 +197,6 @@ class ScriptEditor : public PanelContainer {
 	Button *script_name_button = nullptr;
 	int script_name_width = 0;
 
-	Button *script_back = nullptr;
-	Button *script_forward = nullptr;
-
 	FindInFiles *find_in_files = nullptr;
 
 	WindowWrapper *window_wrapper = nullptr;
@@ -352,9 +349,6 @@ class ScriptEditor : public PanelContainer {
 	void _script_list_clicked(int p_item, Vector2 p_local_mouse_pos, MouseButton p_mouse_button_index);
 	void _make_script_list_context_menu();
 
-	void _calculate_script_name_button_size();
-	void _calculate_script_name_button_ratio();
-
 	void _help_search(const String &p_text);
 
 	void _history_forward();
@@ -367,7 +361,6 @@ class ScriptEditor : public PanelContainer {
 	void _help_class_open(const String &p_class);
 	void _help_class_goto(const String &p_desc);
 	bool _help_tab_goto(const String &p_name, const String &p_desc);
-	void _update_history_arrows();
 	void _save_history();
 	void _save_previous_state(Dictionary p_state);
 	void _go_to_tab(int p_idx);

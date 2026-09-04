@@ -303,11 +303,6 @@ ScriptEditorBase *ScriptEditor::_get_current_editor() const {
 	return Object::cast_to<ScriptEditorBase>(tab_container->get_tab_control(selected));
 }
 
-void ScriptEditor::_update_history_arrows() {
-	script_back->set_disabled(history_pos <= 0);
-	script_forward->set_disabled(history_pos >= history.size() - 1);
-}
-
 void ScriptEditor::_save_history() {
 	if (history_pos >= 0 && history_pos < history.size() && history[history_pos].control == tab_container->get_current_tab_control()) {
 		Node *n = tab_container->get_current_tab_control();
@@ -329,8 +324,6 @@ void ScriptEditor::_save_history() {
 
 	history.push_back(sh);
 	history_pos++;
-
-	_update_history_arrows();
 }
 
 void ScriptEditor::_save_previous_state(Dictionary p_state) {
@@ -354,8 +347,6 @@ void ScriptEditor::_save_previous_state(Dictionary p_state) {
 
 	history.push_back(sh);
 	history_pos++;
-
-	_update_history_arrows();
 }
 
 void ScriptEditor::_go_to_tab(int p_idx) {
@@ -412,16 +403,12 @@ void ScriptEditor::_go_to_tab(int p_idx) {
 	}
 
 	if (EditorHelp *eh = Object::cast_to<EditorHelp>(c)) {
-		script_name_button->set_text(eh->get_class());
-		_calculate_script_name_button_size();
-
 		if (is_visible_in_tree()) {
 			eh->set_focused();
 		}
 	}
 
 	c->set_meta("__editor_pass", ++edit_pass);
-	_update_history_arrows();
 	_update_script_colors();
 	_update_members_overview();
 	_update_help_overview();
@@ -608,11 +595,8 @@ void ScriptEditor::_close_tab(int p_idx, bool p_save, bool p_history_back) {
 		} else {
 			_update_selected_editor_menu();
 			_update_online_doc();
-			script_name_button->set_text(String());
-			_calculate_script_name_button_size();
 		}
 
-		_update_history_arrows();
 		_update_script_names();
 		_save_layout();
 		_update_find_replace_bar();
@@ -1455,18 +1439,8 @@ void ScriptEditor::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
 			tab_container->add_theme_style_override(SceneStringName(panel), get_theme_stylebox(SNAME("ScriptEditor"), EditorStringName(EditorStyles)));
 
-			_calculate_script_name_button_size();
-
 			help_search->set_button_icon(get_editor_theme_icon(SNAME("HelpSearch")));
 			site_search->set_button_icon(get_editor_theme_icon(SNAME("ExternalLink")));
-
-			if (is_layout_rtl()) {
-				script_forward->set_button_icon(get_editor_theme_icon(SNAME("Back")));
-				script_back->set_button_icon(get_editor_theme_icon(SNAME("Forward")));
-			} else {
-				script_forward->set_button_icon(get_editor_theme_icon(SNAME("Forward")));
-				script_back->set_button_icon(get_editor_theme_icon(SNAME("Back")));
-			}
 
 			members_overview_alphabeta_sort_button->set_button_icon(get_editor_theme_icon(SNAME("Sort")));
 
@@ -1673,8 +1647,6 @@ void ScriptEditor::_script_selected(int p_idx) {
 	grab_focus_block = !Input::get_singleton()->is_mouse_button_pressed(MouseButton::LEFT); //amazing hack, simply amazing
 
 	_go_to_tab(script_list->get_item_metadata(p_idx));
-	script_name_button->set_text(script_list->get_item_text(p_idx));
-	_calculate_script_name_button_size();
 	grab_focus_block = false;
 }
 
@@ -2102,22 +2074,6 @@ void ScriptEditor::_update_script_names() {
 				_update_selected_editor_menu();
 			}
 		}
-	}
-
-	bool has_active_tab = false;
-
-	for (const _ScriptEditorItemData &sedata_i : sedata) {
-		if (tab_container->get_current_tab() == sedata_i.index) {
-			script_name_button->set_text(sedata_i.name);
-			script_name_button->show();
-			_calculate_script_name_button_size();
-			has_active_tab = true;
-			break;
-		}
-	}
-
-	if (!has_active_tab) {
-		script_name_button->hide();
 	}
 
 	if (!waiting_update_names) {
@@ -3539,7 +3495,6 @@ void ScriptEditor::_update_history_pos(int p_new_pos) {
 
 	n->set_meta("__editor_pass", ++edit_pass);
 	_update_script_names();
-	_update_history_arrows();
 	_update_selected_editor_menu();
 }
 
@@ -3608,36 +3563,6 @@ bool ScriptEditor::script_goto_method(Ref<Script> p_script, const String &p_meth
 
 void ScriptEditor::set_live_auto_reload_running_scripts(bool p_enabled) {
 	auto_reload_running_scripts = p_enabled;
-}
-
-void ScriptEditor::_calculate_script_name_button_size() {
-	Ref<Font> font = script_name_button->get_theme_font(SceneStringName(font), SNAME("Button"));
-	HorizontalAlignment alignment = script_name_button->get_text_alignment();
-	int font_size = script_name_button->get_theme_font_size(SceneStringName(font_size), SNAME("Button"));
-	String text = script_name_button->get_text();
-	int jst_flags = TextServer::JUSTIFICATION_WORD_BOUND | TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_SKIP_LAST_LINE | TextServer::JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE;
-	TextServer::Direction direction = TextServer::Direction(script_name_button->get_text_direction());
-	Vector2 text_size = font->get_string_size(text, alignment, -1, font_size, jst_flags, direction, TextServer::ORIENTATION_HORIZONTAL);
-
-	script_name_width = text_size.x + script_name_button->get_theme_stylebox(CoreStringName(normal))->get_content_margin(SIDE_LEFT) + script_name_button->get_theme_stylebox(CoreStringName(normal))->get_content_margin(SIDE_RIGHT);
-	_calculate_script_name_button_ratio();
-}
-
-void ScriptEditor::_calculate_script_name_button_ratio() {
-	const float total_width = script_name_button_hbox->get_size().width;
-	if (total_width <= 0) {
-		return;
-	}
-
-	// Make the ratios a fraction bigger, to avoid unnecessary trimming.
-	const float extra_ratio = 4 / total_width;
-
-	const float script_name_ratio = MIN(1, script_name_width / total_width + extra_ratio);
-	script_name_button->set_stretch_ratio(script_name_ratio);
-
-	float ratio_left = 1 - script_name_ratio;
-	script_name_button_left_spacer->set_stretch_ratio(ratio_left / 2);
-	script_name_button_right_spacer->set_stretch_ratio(ratio_left / 2);
 }
 
 void ScriptEditor::_help_search(const String &p_text) {
@@ -3977,19 +3902,6 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/show_in_file_system", TTRC("Show in FileSystem")), FILE_MENU_SHOW_IN_FILE_SYSTEM);
 	file_menu->get_popup()->add_separator();
 
-	file_menu->get_popup()->add_shortcut(
-			ED_SHORTCUT_ARRAY("script_editor/history_previous", TTRC("History Previous"),
-					{ int32_t(KeyModifierMask::ALT | Key::LEFT), int32_t(Key::BACK) }),
-			FILE_MENU_HISTORY_PREV);
-	file_menu->get_popup()->add_shortcut(
-			ED_SHORTCUT_ARRAY("script_editor/history_next", TTRC("History Next"),
-					{ int32_t(KeyModifierMask::ALT | Key::RIGHT), int32_t(Key::FORWARD) }),
-			FILE_MENU_HISTORY_NEXT);
-	ED_SHORTCUT_OVERRIDE("script_editor/history_previous", "macos", KeyModifierMask::ALT | KeyModifierMask::META | Key::LEFT);
-	ED_SHORTCUT_OVERRIDE("script_editor/history_next", "macos", KeyModifierMask::ALT | KeyModifierMask::META | Key::RIGHT);
-
-	file_menu->get_popup()->add_separator();
-
 	theme_submenu = memnew(PopupMenu);
 	theme_submenu->add_shortcut(ED_SHORTCUT("script_editor/import_theme", TTRC("Import Theme...")), THEME_IMPORT);
 	theme_submenu->add_shortcut(ED_SHORTCUT("script_editor/reload_theme", TTRC("Reload Theme")), THEME_RELOAD);
@@ -4041,20 +3953,11 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	script_name_button_hbox = memnew(HBoxContainer);
 	script_name_button_hbox->set_h_size_flags(SIZE_EXPAND_FILL);
 	script_name_button_hbox->add_theme_constant_override("separation", 0);
-	script_name_button_hbox->connect(SceneStringName(item_rect_changed), callable_mp(this, &ScriptEditor::_calculate_script_name_button_ratio));
 	menu_hb->add_child(script_name_button_hbox);
 
 	script_name_button_left_spacer = memnew(Control);
 	script_name_button_left_spacer->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	script_name_button_hbox->add_child(script_name_button_left_spacer);
-
-	script_name_button = memnew(Button);
-	script_name_button->set_flat(true);
-	script_name_button->set_text_overrun_behavior(TextServer::OVERRUN_TRIM_ELLIPSIS);
-	script_name_button->set_h_size_flags(SIZE_EXPAND_FILL);
-	script_name_button->set_tooltip_text(TTRC("Navigate to script list."));
-	script_name_button->connect(SceneStringName(pressed), callable_mp(script_list, &ItemList::ensure_current_is_visible));
-	script_name_button_hbox->add_child(script_name_button);
 
 	script_name_button_right_spacer = memnew(Control);
 	script_name_button_right_spacer->set_h_size_flags(Control::SIZE_EXPAND_FILL);
@@ -4072,24 +3975,6 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	help_search->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_menu_option).bind(SEARCH_HELP));
 	menu_hb->add_child(help_search);
 	help_search->set_tooltip_text(TTRC("Search the reference documentation."));
-
-	menu_hb->add_child(memnew(VSeparator));
-
-	script_back = memnew(Button);
-	script_back->set_theme_type_variation(SceneStringName(FlatButton));
-	script_back->set_tooltip_text(TTRC("Go to previous edited document."));
-	script_back->set_shortcut(ED_GET_SHORTCUT("script_editor/history_previous"));
-	script_back->set_disabled(true);
-	menu_hb->add_child(script_back);
-	script_back->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_history_back));
-
-	script_forward = memnew(Button);
-	script_forward->set_theme_type_variation(SceneStringName(FlatButton));
-	script_forward->set_tooltip_text(TTRC("Go to next edited document."));
-	script_forward->set_shortcut(ED_GET_SHORTCUT("script_editor/history_next"));
-	script_forward->set_disabled(true);
-	menu_hb->add_child(script_forward);
-	script_forward->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_history_forward));
 
 	menu_hb->add_child(memnew(VSeparator));
 
