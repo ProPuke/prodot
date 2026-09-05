@@ -100,7 +100,7 @@ void EditorMainScreen::set_button_container(HBoxContainer *p_button_hb) {
 		icon->connect_changed(callable_mp((Control *)scene_button, &Control::update_minimum_size));
 	}
 
-	scene_button->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select_scene_editor));
+	scene_button->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select_scene_editor).bind(false, false));
 
 	button_hb->add_child(scene_button);
 }
@@ -123,7 +123,7 @@ void EditorMainScreen::save_layout_to_config(Ref<ConfigFile> p_config_file, cons
 void EditorMainScreen::load_layout_from_config(Ref<ConfigFile> p_config_file, const String &p_section) {
 	int selected_main_editor_idx = p_config_file->get_value(p_section, "selected_main_editor_idx", -1);
 	if (selected_main_editor_idx >= 0 && selected_main_editor_idx < (int)editors.size()) {
-		callable_mp(this, &EditorMainScreen::select).call_deferred(selected_main_editor_idx);
+		callable_mp(this, &EditorMainScreen::select).call_deferred(selected_main_editor_idx, false);
 	}
 }
 
@@ -197,8 +197,8 @@ void EditorMainScreen::select_by_name(const String &p_name) {
 	ERR_FAIL_MSG("The editor name '" + p_name + "' was not found.");
 }
 
-void EditorMainScreen::select(int p_index) {
-	if (EditorNode::get_singleton()->is_changing_scene()) {
+void EditorMainScreen::select(int p_index, bool p_force) {
+	if (!p_force && EditorNode::get_singleton()->is_changing_scene()) {
 		return;
 	}
 
@@ -247,8 +247,14 @@ void EditorMainScreen::select(int p_index) {
 	EditorNode::get_singleton()->update_distraction_free_mode();
 }
 
-void EditorMainScreen::select_scene_editor() {
-	select(last_scene_editor);
+void EditorMainScreen::select_scene_editor(bool p_autoselect, bool p_force) {
+	if (p_autoselect) {
+		Node *root = EditorNode::get_singleton()->get_edited_scene();
+		bool is_3d = !root || root->is_class("Node3D");
+		select(is_3d ? EditorMainScreen::EDITOR_3D : EditorMainScreen::EDITOR_2D, p_force);
+	} else {
+		select(last_scene_editor, p_force);
+	}
 }
 
 int EditorMainScreen::get_selected_index() const {
@@ -331,7 +337,7 @@ void EditorMainScreen::add_main_plugin(EditorPlugin *p_editor) {
 			icon->connect_changed(callable_mp((Control *)tb, &Control::update_minimum_size));
 		}
 
-		tb->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select).bind(editors.size()));
+		tb->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select).bind(editors.size(), false));
 
 		button_hb->add_child(tb);
 	}
@@ -344,7 +350,7 @@ void EditorMainScreen::remove_main_plugin(EditorPlugin *p_editor) {
 	// Unbind all buttons in advance (as indexes are about to change)
 	for (Editor &editor : editors) {
 		if (editor.button) {
-			editor.button->disconnect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select));
+			editor.button->disconnect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select).bind(false));
 		}
 	}
 
@@ -366,7 +372,7 @@ void EditorMainScreen::remove_main_plugin(EditorPlugin *p_editor) {
 	// Rebind buttons after with correct indexes
 	for (unsigned int i = 0; i < editors.size(); i++) {
 		if (editors[i].button) {
-			editors[i].button->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select).bind(i));
+			editors[i].button->connect(SceneStringName(pressed), callable_mp(this, &EditorMainScreen::select).bind(i, false));
 		}
 	}
 

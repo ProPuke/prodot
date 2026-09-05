@@ -84,8 +84,9 @@ public:
 	void select_next();
 	void select_prev();
 	void select_by_name(const String &p_name);
-	void select(int p_index);
-	void select_scene_editor();
+	void select(int p_index, bool p_force = false);
+	void select_scene_editor(bool p_autoselect = false, bool p_force = false);
+	EditorTable get_last_scene_editor() { return last_scene_editor; }
 	int get_selected_index() const;
 	int get_plugin_index(EditorPlugin *p_editor) const;
 	EditorPlugin *get_selected_plugin() const;

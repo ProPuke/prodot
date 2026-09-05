@@ -4647,6 +4647,7 @@ Dictionary EditorNode::_get_main_scene_state() {
 	state["scene_tree_offset"] = SceneTreeDock::get_singleton()->get_tree_editor()->get_scene_tree()->get_vscroll_bar()->get_value();
 	state["property_edit_offset"] = InspectorDock::get_inspector_singleton()->get_scroll_offset();
 	state["node_filter"] = SceneTreeDock::get_singleton()->get_filter();
+	state["3d_view"] = EditorNode::get_singleton()->get_editor_main_screen()->get_last_scene_editor() == EditorMainScreen::EDITOR_3D;
 	return state;
 }
 
@@ -4681,6 +4682,13 @@ void EditorNode::_set_main_scene_state(const Dictionary &p_state) {
 	EditorDebuggerNode::get_singleton()->update_live_edit_root();
 	ScriptEditor::get_singleton()->set_scene_root_script(editor_data.get_scene_root_script(editor_data.get_edited_scene()));
 	editor_data.notify_edited_scene_changed();
+
+	if (p_state.has("3d_view")) {
+		editor_main_screen->select((bool)p_state["3d_view"] ? EditorMainScreen::EDITOR_3D : EditorMainScreen::EDITOR_2D, true);
+	} else {
+		editor_main_screen->select_scene_editor(true, true);
+	}
+
 	emit_signal(SNAME("scene_changed"));
 
 	// Reset SDFGI after everything else so that any last-second scene modifications will be processed.
@@ -4987,8 +4995,7 @@ Error EditorNode::open_scene(const String &p_scene, bool p_ignore_broken_deps, b
 	Node *new_scene = editor_data.get_edited_scene_root(current_scene_idx);
 	ERR_FAIL_NULL_V(new_scene, ERR_BUG);
 
-	bool is_3d = new_scene && new_scene->is_class("Node3D");
-	editor_main_screen->select(is_3d ? EditorMainScreen::EDITOR_3D : EditorMainScreen::EDITOR_2D);
+	editor_main_screen->select_scene_editor(true);
 
 	_set_current_scene_nocheck(current_scene_idx);
 
