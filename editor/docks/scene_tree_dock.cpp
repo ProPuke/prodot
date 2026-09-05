@@ -1611,9 +1611,11 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 				switch (p_tool) {
 					case TOOL_CREATE_2D_SCENE:
 						new_node = memnew(Node2D);
+						EditorNode::get_singleton()->get_editor_main_screen()->select(EditorMainScreen::EDITOR_2D);
 						break;
 					case TOOL_CREATE_3D_SCENE:
 						new_node = memnew(Node3D);
+						EditorNode::get_singleton()->get_editor_main_screen()->select(EditorMainScreen::EDITOR_3D);
 						break;
 					case TOOL_CREATE_USER_INTERFACE: {
 						Control *node = memnew(Control);
@@ -1621,7 +1623,7 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 						node->set_anchors_and_offsets_preset(PRESET_FULL_RECT);
 						node->set_grow_direction_preset(PRESET_FULL_RECT);
 						new_node = node;
-
+						EditorNode::get_singleton()->get_editor_main_screen()->select(EditorMainScreen::EDITOR_2D);
 					} break;
 				}
 			}
@@ -1635,6 +1637,9 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 			EditorNode::get_singleton()->edit_node(new_node);
 			editor_selection->clear();
 			editor_selection->add_node(new_node);
+
+			bool is_3d = new_node->is_class("Node3D");
+			EditorNode::get_singleton()->get_editor_main_screen()->select(is_3d ? EditorMainScreen::EDITOR_3D : EditorMainScreen::EDITOR_2D);
 
 			scene_tree->get_scene_tree()->grab_focus(true);
 		} break;
@@ -3096,6 +3101,9 @@ Node *SceneTreeDock::_do_create(Node *p_parent) {
 		undo_redo->add_do_method(scene_tree, "update_tree");
 		undo_redo->add_do_reference(child);
 		undo_redo->add_undo_method(EditorNode::get_singleton(), "set_edited_scene", (Object *)nullptr);
+
+		bool is_3d = child->is_class("Node3D");
+		EditorNode::get_singleton()->get_editor_main_screen()->select(is_3d ? EditorMainScreen::EDITOR_3D : EditorMainScreen::EDITOR_2D);
 	}
 
 	undo_redo->add_do_method(this, "_post_do_create", child);

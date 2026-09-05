@@ -4987,7 +4987,8 @@ Error EditorNode::open_scene(const String &p_scene, bool p_ignore_broken_deps, b
 	Node *new_scene = editor_data.get_edited_scene_root(current_scene_idx);
 	ERR_FAIL_NULL_V(new_scene, ERR_BUG);
 
-	editor_main_screen->select_scene_editor();
+	bool is_3d = new_scene && new_scene->is_class("Node3D");
+	editor_main_screen->select(is_3d ? EditorMainScreen::EDITOR_3D : EditorMainScreen::EDITOR_2D);
 
 	_set_current_scene_nocheck(current_scene_idx);
 
