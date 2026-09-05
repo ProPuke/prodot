@@ -8,7 +8,7 @@
 
 ## A simple fork testing some usability improvements
 
-Modifications currently built on top of Godot 4.7.2.
+Modifications currently built on top of Godot 4.7.3-rc.
 
 ### Currently testing:
 
